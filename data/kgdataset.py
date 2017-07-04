@@ -6,7 +6,7 @@ import random
 import math
 import torch
 
-KAGGLE_DATA_DIR ='/media/jxu7/BACK-UP/Data/AmazonPlanet'
+KAGGLE_DATA_DIR ='/home/ubuntu/Kaggle/AmazonForest/data'
 CLASS_NAMES=[
     'clear',    	 # 0
     'haze',	         # 1
@@ -30,14 +30,13 @@ CLASS_NAMES=[
 
 class KgForestDataset(Dataset):
 
-    def __init__(self, split, transform=None, height=256, width=256, label_csv='train.csv'):
+    def __init__(self, split, transform=None, height=256, width=256, label_csv='train_v2.csv'):
         class_names = CLASS_NAMES
         num_classes = len(class_names)
         data_dir = KAGGLE_DATA_DIR
         ext = 'train' if label_csv else 'test'
         # read names
         list = data_dir +'/split/'+ split
-        print(data_dir)
         with open(list) as f:
             names = f.readlines()
         names = [x.strip()for x in names]
@@ -47,6 +46,7 @@ class KgForestDataset(Dataset):
         images = np.zeros((num,height,width,3),dtype=np.float32)
         for n in range(num):
             img_file = data_dir + '/{}/'.format(ext) + names[n]
+            print(img_file)
             jpg_file = img_file.replace('<ext>','jpg')
             image_jpg = cv2.imread(jpg_file,1)
             h,w = image_jpg.shape[0:2]

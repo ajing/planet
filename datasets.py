@@ -13,6 +13,12 @@ import cv2
 mean = [0.31151703, 0.34061992, 0.29885209]
 std = [0.16730586, 0.14391145, 0.13747531]
 
+FILE_DIR = '/home/ubuntu/Kaggle/AmazonForest/data'
+TRAIN_JPG_DIR = os.path.join(FILE_DIR, 'train-jpg')
+TRAIN_TIF_DIR = os.path.join(FILE_DIR, 'train-tif-v2')
+TRAIN_LABEL = os.path.join(FILE_DIR, 'train_v2.csv')
+TEST_JPG_DIR = os.path.join(FILE_DIR, 'test-jpg')
+TEST_TIF_DIR = os.path.join(FILE_DIR, 'test-tif')
 
 class RandomVerticalFlip(object):
     def __call__(self, img):
@@ -166,11 +172,16 @@ class PlanetDataSet(Dataset):
             else:
                 image_names = pd.read_csv('dataset/train.csv' if mode == 'Train' else '../dataset/validation.csv')
             image_names = image_names.as_matrix().flatten()
+            print("image_names", image_names)
             self.image_filenames = image_names
             for image in image_names:
+                print("Current image:", image)
                 str_target = self.labels.loc[self.labels['image_name'] == image]
                 image = os.path.join(image_dir, '{}{}'.format(image, suffix))
                 target = np.zeros(num_labels, dtype=np.float32)
+                print('str_target:\n', str_target)
+                print('value split:\n')
+                print(str_target['tags'].values[0].split(' '))
                 target_index = [label_to_idx[l] for l in str_target['tags'].values[0].split(' ')]
                 target[target_index] = 1
                 image = load_img(image)
@@ -221,8 +232,8 @@ class PlanetDataSet(Dataset):
 
 def train_tif_loader(batch_size=64, transform=ToTensor()):
     dataset = PlanetDataSet(
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train-tif-v2',
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train.csv',
+        TRAIN_TIF_DIR,
+        TRAIN_LABEL,
         mode='Train',
         input_transform=transform,
         tif=True
@@ -232,8 +243,8 @@ def train_tif_loader(batch_size=64, transform=ToTensor()):
 
 def validation_tif_loader(batch_size=64, transform=ToTensor()):
     dataset = PlanetDataSet(
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train-tif-v2',
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train.csv',
+        TRAIN_TIF_DIR,
+        TRAIN_LABEL,
         mode='Validation',
         input_transform=transform,
         tif=True
@@ -243,7 +254,7 @@ def validation_tif_loader(batch_size=64, transform=ToTensor()):
 
 def test_tif_loader(batch_size=64, transform=ToTensor()):
     dataset = PlanetDataSet(
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/test/test-tif',
+        TEST_TIF_DIR,
         mode='Test',
         input_transform=transform,
         tif=True
@@ -253,8 +264,8 @@ def test_tif_loader(batch_size=64, transform=ToTensor()):
 
 def train_jpg_loader_all(batch_size=64, transform=ToTensor()):
     dataset = PlanetDataSet(
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train-jpg',
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train.csv',
+        TRAIN_JPG_DIR,
+        TRAIN_LABEL,
         mode='Train',
         input_transform=transform,
         read_all=True
@@ -264,8 +275,8 @@ def train_jpg_loader_all(batch_size=64, transform=ToTensor()):
 
 def train_jpg_loader(batch_size=64, transform=ToTensor()):
     dataset = PlanetDataSet(
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train-jpg',
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train.csv',
+        TRAIN_JPG_DIR,
+        TRAIN_LABEL,
         mode='Train',
         input_transform=transform
     )
@@ -274,8 +285,8 @@ def train_jpg_loader(batch_size=64, transform=ToTensor()):
 
 def validation_jpg_loader(batch_size=64, transform=ToTensor()):
     dataset = PlanetDataSet(
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train-jpg',
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train.csv',
+        TRAIN_JPG_DIR,
+        TRAIN_LABEL,
         mode='Validation',
         input_transform=transform
     )
@@ -284,7 +295,7 @@ def validation_jpg_loader(batch_size=64, transform=ToTensor()):
 
 def test_jpg_loader(batch_size=128, transform=ToTensor()):
     dataset = PlanetDataSet(
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/test/test-jpg',
+        TEST_JPG_DIR,
         mode='Test',
         input_transform=transform
     )
@@ -301,8 +312,8 @@ def check(dataset):
 
 
 if __name__ == '__main__':
-    dd = PlanetDataSet('/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train-jpg',
-        '/media/jxu7/BACK-UP/Data/AmazonPlanet/train/train.csv',
+    dd = PlanetDataSet(TRAIN_JPG_DIR,
+        TRAIN_LABEL,
         mode='Train', input_transform=None)
     dd = DataLoader(dd, batch_size=1)
     check(dd)
