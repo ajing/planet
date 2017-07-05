@@ -1,3 +1,5 @@
+A fork repo for https://github.com/JunhongXu/planet-kaggle-pytorch
+
 ## Some thoughts so far:
 
 1. Deep neural nets like DenseNet or ResNet are good for computer 
