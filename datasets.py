@@ -17,8 +17,13 @@ FILE_DIR = '/home/ubuntu/Kaggle/AmazonForest/data'
 TRAIN_JPG_DIR = os.path.join(FILE_DIR, 'train-jpg')
 TRAIN_TIF_DIR = os.path.join(FILE_DIR, 'train-tif-v2')
 TRAIN_LABEL = os.path.join(FILE_DIR, 'train_v2.csv')
+TRAIN_SPLIT = 'dataset/train-37479'
+VAL_SPLIT = 'dataset/validation-3000'
+
+
 TEST_JPG_DIR = os.path.join(FILE_DIR, 'test-jpg')
 TEST_TIF_DIR = os.path.join(FILE_DIR, 'test-tif')
+
 
 class RandomVerticalFlip(object):
     def __call__(self, img):
@@ -170,22 +175,25 @@ class PlanetDataSet(Dataset):
             if read_all:
                 image_names = pd.read_csv('../dataset/train_all.csv')
             else:
-                image_names = pd.read_csv('dataset/train.csv' if mode == 'Train' else '../dataset/validation.csv')
+                image_names = pd.read_csv(TRAIN_SPLIT if mode == 'Train' else VAL_SPLIT)
             image_names = image_names.as_matrix().flatten()
             print("image_names", image_names)
             self.image_filenames = image_names
-            for image in image_names:
-                print("Current image:", image)
-                str_target = self.labels.loc[self.labels['image_name'] == image]
-                image = os.path.join(image_dir, '{}{}'.format(image, suffix))
+            for im_name in image_names:
+                print("Current image:", im_name)
+                str_target = self.labels.loc[self.labels['image_name'] == im_name]
+                image_file = os.path.join(image_dir, '{}{}'.format(im_name, suffix))
                 target = np.zeros(num_labels, dtype=np.float32)
-                print('str_target:\n', str_target)
-                print('value split:\n')
-                print(str_target['tags'].values[0].split(' '))
+                #print('str_target:\n', str_target)
+                #print('value split:\n')
+                #print(str_target['tags'].values[0].split(' '))
                 target_index = [label_to_idx[l] for l in str_target['tags'].values[0].split(' ')]
                 target[target_index] = 1
-                image = load_img(image)
-                self.images.append(image)
+                print("image_file:", image_file)
+                assert(os.path.isfile(image_file))
+                image_obj = load_img(image_file)
+                #print("image_obj:",image_obj)
+                self.images.append(image_obj)
                 self.targets.append(target)
         elif mode == 'Test':
             self.image_filenames = sorted([os.path.join(image_dir, filename) for filename in os.listdir(image_dir)
@@ -221,9 +229,14 @@ class PlanetDataSet(Dataset):
             return image, im_id
         else:
             image = self.images[index]
+            print("retrieve image:", image)
+            print("retrieve image size:", image.size)
             target = self.targets[index]
+            print("retrieve target:", target)
+            print("current input transform function:", self.input_transform)
             if self.input_transform is not None:
                 image = self.input_transform(image)
+                print("image after transform:", image)
             return image, torch.from_numpy(target)
 
     def __len__(self):
