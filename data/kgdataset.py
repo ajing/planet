@@ -46,8 +46,9 @@ class KgForestDataset(Dataset):
         images = np.zeros((num,height,width,3),dtype=np.float32)
         for n in range(num):
             img_file = data_dir + '/{}/'.format(ext) + names[n]
-            print(img_file)
+            #print(img_file)
             jpg_file = img_file.replace('<ext>','jpg')
+            #print(jpg_file)
             image_jpg = cv2.imread(jpg_file,1)
             h,w = image_jpg.shape[0:2]
             if height!=h or width!=w:

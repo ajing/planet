@@ -2,6 +2,8 @@ import torch.nn as nn
 from torch.autograd import Variable
 from sklearn.metrics import fbeta_score
 from torch.nn import functional as F
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab! Not require X-server to be running
 from matplotlib import pyplot as plt
 import pandas as pds
 from datasets import *

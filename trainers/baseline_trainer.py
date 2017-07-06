@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab! Not require X-server to be running
+
 import torch.nn as nn
 from torch.nn import functional as F
 from torch import optim
@@ -46,8 +49,8 @@ models = [
           ]
 batch_size = [
                 # 128, 128,
-                64, 64,
-                40, 40,
+                16, 16,
+                16, 16,
                 # 50
             ]
 
@@ -116,7 +119,7 @@ def load_net(net, name):
 
 def train_baselines():
 
-    train_data, val_data = get_dataloader(96)
+    train_data, val_data = get_dataloader(32)
 
     for model, batch in zip(models, batch_size):
         name = str(model).split()[1]
@@ -127,7 +130,7 @@ def train_baselines():
         # load pre-trained model on train-37479
         net = model(pretrained=True)
         net = nn.DataParallel(net.cuda())
-        load_net(net, name)
+        #load_net(net, name)
         # optimizer = get_optimizer(net, lr=.001, pretrained=True, resnet=True if 'resnet' in name else False)
         optimizer = optim.SGD(lr=.005, momentum=0.9, params=net.parameters(), weight_decay=5e-4)
         train_data.batch_size = batch

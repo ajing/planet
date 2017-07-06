@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pds
 
-def split_train_validation(num_val=3000):
+def split_train_validation2(num_val=3000):
     """
     Save train image names and validation image names to csv files
     """
@@ -32,4 +32,8 @@ def split_train_validation(num_val=3000):
     df.to_csv('dataset/validation-%s' % num_val, index=False, header=False)
 
 
-split_train_validation(num_val=3000)
+#split_train_validation2(num_val=3000)
+
+from util import split_train_validation
+
+split_train_validation(num_val = 3000)
