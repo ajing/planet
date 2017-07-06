@@ -44,13 +44,17 @@ def get_optimizer(model, pretrained=True, lr=5e-5, weight_decay=5e-5):
 
 def train(epoch):
     criterion = MultiLabelSoftMarginLoss()
-    net = densenet169(pretrained=False)
+    #net = densenet169(pretrained=False)
+    # edited by Jing Lu
+    net = densenet169(pretrained=True)
     logger = Logger('../log/', NAME)
     optimizer = optim.SGD(lr=1e-1, params=net.parameters(), weight_decay=5e-4, momentum=0.9, nesterov=True)
     # optimizer = get_optimizer(net, False, 1e-4, 1e-4)
     # optimizer = optim.Adam(params=net.parameters(), lr=5e-4, weight_decay=5e-4)
     net.cuda()
-    net = torch.nn.DataParallel(net, device_ids=[0, 1])
+    # edited by Jing Lu
+    #net = torch.nn.DataParallel(net, device_ids=[0, 1])
+    net = torch.nn.DataParallel(net)
     # resnet.load_state_dict(torch.load('../models/simplenet_v3.pth'))
     train_data_set = train_jpg_loader(72, transform=Compose(
         [

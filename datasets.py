@@ -130,9 +130,11 @@ def load_img(filepath):
     np.seterr(all='warn')
 
     if is_image_file(filepath):
-        image = cv2.imread(filepath)# image = io.imread(filepath) # image = Image.open(filepath)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        # image = image.convert('RGB')
+        #image = cv2.imread(filepath)# image = io.imread(filepath) #
+        image = Image.open(filepath)
+
+        #image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image = image.convert('RGB')
     elif '.tif' in filepath:
         tif_image = io.imread(filepath)
         image = np.empty_like(tif_image).astype(np.int32)
@@ -168,6 +170,7 @@ class PlanetDataSet(Dataset):
         self.images = []
         suffix = '.jpg' if tif is False else '.tif'
         print('[*]Loading Dataset {}'.format(image_dir))
+        print('[*]The current mode is {}'.format(mode))
         t = time.time()
         if mode == 'Train' or mode == 'Validation':
             self.targets = []
@@ -175,12 +178,13 @@ class PlanetDataSet(Dataset):
             if read_all:
                 image_names = pd.read_csv('../dataset/train_all.csv')
             else:
-                image_names = pd.read_csv(TRAIN_SPLIT if mode == 'Train' else VAL_SPLIT)
+                image_names = pd.read_csv(TRAIN_SPLIT if mode == 'Train' else VAL_SPLIT, header = None)
             image_names = image_names.as_matrix().flatten()
             print("image_names", image_names)
+            print("image_names length", len(image_names))
             self.image_filenames = image_names
             for im_name in image_names:
-                print("Current image:", im_name)
+                #print("Current image:", im_name)
                 str_target = self.labels.loc[self.labels['image_name'] == im_name]
                 image_file = os.path.join(image_dir, '{}{}'.format(im_name, suffix))
                 target = np.zeros(num_labels, dtype=np.float32)
@@ -189,7 +193,7 @@ class PlanetDataSet(Dataset):
                 #print(str_target['tags'].values[0].split(' '))
                 target_index = [label_to_idx[l] for l in str_target['tags'].values[0].split(' ')]
                 target[target_index] = 1
-                print("image_file:", image_file)
+                #print("image_file:", image_file)
                 assert(os.path.isfile(image_file))
                 image_obj = load_img(image_file)
                 #print("image_obj:",image_obj)
@@ -229,14 +233,14 @@ class PlanetDataSet(Dataset):
             return image, im_id
         else:
             image = self.images[index]
-            print("retrieve image:", image)
-            print("retrieve image size:", image.size)
+            #print("retrieve image:", image)
+            #print("retrieve image size:", image.size)
             target = self.targets[index]
-            print("retrieve target:", target)
-            print("current input transform function:", self.input_transform)
+            #print("retrieve target:", target)
+            #print("current input transform function:", self.input_transform)
             if self.input_transform is not None:
                 image = self.input_transform(image)
-                print("image after transform:", image)
+                #print("image after transform:", image)
             return image, torch.from_numpy(target)
 
     def __len__(self):
