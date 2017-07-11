@@ -1,0 +1,347 @@
+#  proabably incorrect code?
+#  these are imediate implementation and the code are not checked yet
+
+
+
+
+
+#  "Batch Renormalization: Towards Reducing Minibatch Depend ence in Batch-Normalized Models" - arvix 2017
+#  https://www.slideshare.net/DeepLearningJP2016/dlbatch-renormalization-towards-reducing-minibatch-dependence-in-batchnormalized-models
+#  https://arxiv.org/pdf/1702.03275.pdf
+#
+## see : https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/batchnorm.py
+##       https://github.com/darkstar112358/fast-neural-style/blob/master/neural_style/transformer_net.py#L111
+##       https://discuss.pytorch.org/t/implementation-of-batch-renormalization-fails-unexpectedly-segementation-fault-core-dumped/1291/5
+##
+
+
+class BatchReNorm2d(nn.Module):
+
+    def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True, rmax=3.0, dmax=5.0):
+        super(BatchReNorm2d, self).__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.momentum = momentum
+        self.affine = affine
+        self.rmax = rmax
+        self.dmax = dmax
+
+        if self.affine:
+            self.weight = Parameter(torch.Tensor(num_features))
+            self.bias   = Parameter(torch.Tensor(num_features))
+        else:
+            self.register_parameter('weight', None)
+            self.register_parameter('bias',   None)
+
+        self.register_buffer('running_mean', torch.zeros(num_features))
+        self.register_buffer('running_var', torch.ones(num_features))
+        self.register_buffer('r', torch.ones(num_features))
+        self.register_buffer('d', torch.zeros(num_features))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        self.running_mean.zero_()
+        self.running_var.fill_(1)
+        self.r.fill_(1)
+        self.d.zero_()
+        if self.affine:
+            self.weight.data.uniform_()
+            self.bias.data.zero_()
+
+
+    def forward(self, input):
+        dim = input.dim()
+        if  dim!= 4:
+            raise ValueError('expected 4D input (got %dD input)'%dim)
+
+
+        N,C,H,W = input.size()
+        if C != self.running_mean.nelement():
+            raise ValueError('got %d-feature tensor, expected %d'%(input.size(1), self.num_features))
+
+        if self.training:
+            input1 = input.view(N,C,H*W)
+            input2 = input1*input1
+            mean   = input1.sum(2).squeeze(2).sum(0)/(N*H*W)
+            sum    = input2.sum(2).squeeze(2).sum(0) - mean*mean*(N*H*W)
+            invstd = 1./torch.sqrt(sum/(N*H*W) + self.eps)
+            unbiased_var = sum/((N*H*W) - 1)
+
+            self.r = torch.clamp(torch.sqrt(unbiased_var).data / torch.sqrt(self.running_var), 1./self.rmax, self.rmax)
+            self.d = torch.clamp((mean.data - self.running_mean)/ torch.sqrt(self.running_var), -self.dmax, self.dmax)
+
+            r = Variable(self.r, requires_grad=False)
+            d = Variable(self.d, requires_grad=False)
+            input_normalized = (input - mean.view(1,C,1,1).expand_as(input)) * invstd.view(1,C,1,1).expand_as(input)
+            input_normalized = input_normalized*r.view(1,C,1,1).expand_as(input) + d.view(1,C,1,1).expand_as(input)
+
+            self.running_mean += self.momentum * (mean.data         - self.running_mean)
+            self.running_var  += self.momentum * (unbiased_var.data - self.running_var )
+
+            if not self.affine:
+                return input_normalized
+            else:
+                output = input_normalized * self.weight.view(1,C,1,1).expand_as(input)
+                output += self.bias.view(1,C,1,1).expand_as(input)
+                return output
+
+        else:
+            mean   = Variable(self.running_mean)
+            invstd = 1./ torch.sqrt(Variable(self.running_var) + self.eps)
+            input_normalized = (input - mean.view(1,C,1,1).expand_as(input)) * invstd.view(1,C,1,1).expand_as(input)
+
+            if not self.affine:
+                return input_normalized
+            else:
+                output = input_normalized * self.weight.view(1,C,1,1).expand_as(input)
+                output += self.bias.view(1,C,1,1).expand_as(input)
+                return output
+
+    def __repr__(self):
+        return ('{name}({num_features}, eps={eps}, momentum={momentum},'
+                'affine={affine}, rmax={rmax}, dmax={dmax})'
+                .format(name=self.__class__.__name__, **self.__dict__))
+
+def run_test_BatchReNorm2d():
+
+
+    if 0:
+        in_channels  = 5
+        inputs = torch.randn(2,in_channels)
+
+        layer = BatchReNorm(in_channels);
+        outputs = layer(Variable(inputs))
+
+        print(layer)
+        print(outputs)
+
+
+    if 1:
+        in_channels  = 5
+        inputs = torch.randn(2,in_channels,3,3)
+
+        layer = BatchReNorm2d(in_channels)
+        layer.training = False
+        outputs = layer(Variable(inputs))
+
+        print(layer)
+        print(outputs)
+
+
+###################################################################################3
+
+#  https://discuss.pytorch.org/t/resolved-how-to-implement-k-max-pooling-for-cnn-text-classification/931/5
+#def kmax_pooling(x, dim, k):
+#    index = x.topk(k, dim = dim)[1].sort(dim = dim)[0]
+#    return x.gather(dim, index)
+
+
+
+
+
+###################################################################################3
+#
+#
+#
+# # http://eso-python.github.io/ESOPythonTutorials/ESOPythonDemoDay5_matplotlib_BerndHusemann_part1.html
+# def draw_recall_precision(fig, recall, precise, f2, threshold, idx,
+#                           title=None,
+#                           color=None,
+#                           size=1,
+#                           xmin=0,xmax=1,dx=0.1,
+#                           ymin=0,ymax=1,dy=0.1):
+#
+#     recall_star    = recall   [idx]
+#     precise_star   = precise  [idx]
+#     f2_star        = f2       [idx]
+#     threshold_star = threshold[idx]
+#
+#
+#
+#     ax = fig.gca()
+#     ax.set_axisbelow(True)
+#     ax.minorticks_on()
+#     ax.set_xticks(np.arange(xmin,xmax+0.0001, dx))
+#     ax.set_yticks(np.arange(ymin,ymax+0.0001, dy))
+#     ax.set_xlim(xmin,xmax+0.0001)
+#     ax.set_ylim(ymin,ymax+0.0001)
+#     ax.grid(b=True, which='minor', color='black', alpha=0.3, linestyle='dashed')
+#     ax.grid(b=True, which='major', color='black', alpha=0.5, linestyle='dashed')
+#     ax.set_xlabel('recall')
+#     ax.set_ylabel('precise')
+#
+#     if color is None:
+#         ax.scatter(recall, precise, c=f2, s=size, marker='o',  cmap = matplotlib.cm.jet)
+#     else:
+#         ax.scatter(recall, precise, c=color, s=size, marker='o',  cmap = matplotlib.cm.jet)
+#
+#     ax.scatter(recall_star, precise_star, marker='o', facecolors='white', edgecolors='black')
+#     if title is not None:
+#         ax.set_title('%s\n best recall=%0.3f, precise=%0.3f\n f2=%0.3f @ th=%0.3f'%(title,recall_star,precise_star,f2_star,threshold_star))
+#
+#
+#
+# def draw_distribution(fig, labels, predictions,
+#                           title=None,
+#                           xmin=0,xmax=1,dx=0.1,
+#                           ymin=0,ymax=0.5,dy=0.05):
+#
+#     labels    = labels.astype(np.int32)
+#     pos_index = np.where(labels==1)[0]
+#     neg_index = np.where(labels==0)[0]
+#
+#     bin_edges = np.arange(0,1.0001,0.05)
+#     B=len(bin_edges)-1
+#     h_pos, bin_edges  = np.histogram(predictions[pos_index], bins=bin_edges)
+#     h_neg, bin_edges  = np.histogram(predictions[neg_index], bins=bin_edges)
+#     bin = (bin_edges[:B] + bin_edges[1:B+1] )/2
+#     h_pos = h_pos/len(pos_index)
+#     h_neg = h_neg/len(neg_index)
+#
+#     ax = fig.gca()
+#     ax.set_axisbelow(True)
+#     ax.minorticks_on()
+#     ax.set_xticks(np.arange(xmin,xmax+0.0001, dx))
+#     ax.set_yticks(np.arange(ymin,ymax+0.0001, dy))
+#     ax.set_xlim(xmin,xmax+0.0001)
+#     ax.set_ylim(ymin,ymax+0.0001)
+#     ax.grid(b=True, which='minor', color='black', alpha=0.3, linestyle='dashed')
+#     ax.grid(b=True, which='major', color='black', alpha=0.5, linestyle='dashed')
+#     ax.set_xlabel('score')
+#     ax.set_ylabel(r'%')
+#
+#     ax.plot(bin, h_pos, c=(0,0,1))
+#     ax.plot(bin, h_neg, c=(1,0,0))
+#
+#     if title is not None:
+#         ax.set_title('%s\n'%(title))
+#
+#     pass
+
+
+################################################################################
+
+
+
+
+#
+#
+#
+#
+#
+# ## Augmentation code here -------------------
+# # geometric transform
+# # illumination transform
+# # etc
+#
+#
+#
+# ##https://github.com/pytorch/vision/pull/27/commits/659c854c6971ecc5b94dca3f4459ef2b7e42fb70
+#
+#
+# class Lighting(object):
+#     """Lighting noise(AlexNet - style PCA - based noise)"""
+#
+#     def __init__(self, alphastd, eigval, eigvec):
+#         self.alphastd = alphastd
+#         self.eigval = eigval
+#         self.eigvec = eigvec
+#
+#     def __call__(self, img):
+#         if self.alphastd == 0:
+#             return img
+#
+#         alpha = img.new().resize_(3).normal_(0, self.alphastd)
+#         rgb = self.eigvec.type_as(img).clone()\
+#             .mul(alpha.view(1, 3).expand(3, 3))\
+#             .mul(self.eigval.view(1, 3).expand(3, 3))\
+#             .sum(1).squeeze()
+#
+#         return img.add(rgb.view(3, 1, 1).expand_as(img))
+#
+#
+# class Grayscale(object):
+#
+#     def __call__(self, img):
+#         gs = img.clone()
+#         gs[0].mul_(0.299).add_(0.587, gs[1]).add_(0.114, gs[2])
+#         gs[1].copy_(gs[0])
+#         gs[2].copy_(gs[0])
+#         return gs
+#
+#
+# class Saturation(object):
+#
+#     def __init__(self, var):
+#         self.var = var
+#
+#     def __call__(self, img):
+#         gs = Grayscale()(img)
+#         alpha = random.uniform(0, self.var)
+#         return img.lerp(gs, alpha)
+#
+#
+# class Brightness(object):
+#
+#     def __init__(self, var):
+#         self.var = var
+#
+#     def __call__(self, img):
+#         gs = img.new().resize_as_(img).zero_()
+#         alpha = random.uniform(0, self.var)
+#         return img.lerp(gs, alpha)
+#
+#
+# class Contrast(object):
+#
+#     def __init__(self, var):
+#         self.var = var
+#
+#     def __call__(self, img):
+#         gs = Grayscale()(img)
+#         gs.fill_(gs.mean())
+#         alpha = random.uniform(0, self.var)
+#         return img.lerp(gs, alpha)
+#
+#
+# class RandomOrder(object):
+#     """ Composes several transforms together in random order.
+#     """
+#
+#     def __init__(self, transforms):
+#         self.transforms = transforms
+#
+#     def __call__(self, img):
+#         if self.transforms is None:
+#             return img
+#         order = torch.randperm(len(self.transforms))
+#         for i in order:
+#             img = self.transforms[i](img)
+#         return img
+#
+#
+# class ColorJitter(RandomOrder):
+#
+#     def __init__(self, brightness=0.4, contrast=0.4, saturation=0.4):
+#         self.transforms = []
+#         if brightness != 0:
+#             self.transforms.append(Brightness(brightness))
+#         if contrast != 0:
+#             self.transforms.append(Contrast(contrast))
+#         if saturation != 0:
+#             self.transforms.append(Saturation(saturation))
+#
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
